@@ -8,8 +8,6 @@
 #ifndef INC_RTOS_LIST_H_
 #define INC_RTOS_LIST_H_
 
-#include <stddef.h>
-#include "stm32f4xx.h"
 
 struct listItem_t
 {

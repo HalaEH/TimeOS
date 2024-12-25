@@ -4,7 +4,7 @@
  *  Created on: Dec 24, 2024
  *      Author: halaabdelrahman
  */
-#include "rtos_list.h"
+#include "rtos.h"
 
 /**
  * @brief Initializes an RTOS list structure.
