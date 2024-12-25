@@ -25,6 +25,7 @@ typedef struct
 
 void RTOS_threadInitLists(void);
 void RTOS_threadCreate(RTOS_thread_t * pThread, RTOS_stack_t * pStack, uint32_t priority, void * pFunction);
+void RTOS_SVC_threadCreate(RTOS_thread_t * pThread, RTOS_stack_t * pStack, uint32_t priority, void * pFunction);
 RTOS_thread_t * RTOS_threadGetCurrentReady(void);
 
 #endif /* INC_RTOS_THREAD_H_ */

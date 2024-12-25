@@ -20,5 +20,6 @@ void RTOS_init(void);
 void RTOS_schedulerStart(void);
 void RTOS_SVC_Handler_main(uint32_t * svc_args);
 void RTOS_SysTick_Handler(void);
+void RTOS_SVC_schedulerStart(void);
 
 #endif /* INC_RTOS_H_ */
