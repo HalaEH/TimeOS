@@ -16,5 +16,9 @@
 
 #define MEM32_ADDRESS(ADDRESS) (*((volatile unsigned long *)(ADDRESS)))
 
+void RTOS_init(void);
+void RTOS_schedulerStart(void);
+void RTOS_SVC_Handler_main(uint32_t * svc_args);
+void RTOS_SysTick_Handler(void);
 
 #endif /* INC_RTOS_H_ */
