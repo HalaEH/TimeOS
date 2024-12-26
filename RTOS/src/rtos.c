@@ -9,6 +9,21 @@
 #include "rtos.h"
 
 static volatile uint32_t sysTickCounter = 0;
+static RTOS_thread_t idleThread;
+static RTOS_stack_t idleThreadStack;
+uint32_t svcEXEReturn;
+
+
+static void idleThreadFunction(void);
+
+static void idleThreadFunction(void)
+{
+	while(1)
+	{
+
+	}
+}
+
 
 /**
  * @brief Initializes the RTOS core and configures the system for multitasking.
@@ -56,9 +71,44 @@ void RTOS_init(void)
 
 }
 
+/**
+ * @brief Starts the RTOS scheduler.
+ *
+ * This function initializes and starts the RTOS scheduler by creating the idle thread,
+ * setting up the stack and control registers for the first running thread, and enabling interrupts.
+ *
+ */
 void RTOS_schedulerStart(void)
 {
+	/* Create idle thread */
+	RTOS_threadCreate(&idleThread, &idleThreadStack, (THREAD_PRIORITY_LEVELS - 1), idleThreadFunction);
 
+	/* Pointer to the current running thread */
+	RTOS_thread_t * pRunningThread;
+
+	/* Update the running thread */
+	RTOS_threadSwitchRunning();
+
+	/* Get running thread */
+	pRunningThread = RTOS_threadGetRunning();
+
+	/* Set SVC interrupt return to the first thread */
+	svcEXEReturn = MEM32_ADDRESS(pRunningThread->pStackPointer);
+
+	/* Return to thread with PSP */
+	__set_PSP((uint32_t)(pRunningThread->pStackPointer + 10 * 4));
+
+	/* Switch to use Process Stack, unprivileged state */
+	__set_CONTROL(MEM32_ADDRESS((pRunningThread->pStackPointer) + (1 << 2)));
+
+	/* Execute ISB after changing control */
+	__ISB();
+
+	/* Reset tick counter */
+	sysTickCounter = 0;
+
+	/* Enable all interrupts */
+	__set_BASEPRI(0);
 }
 
 /**

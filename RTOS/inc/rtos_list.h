@@ -15,6 +15,7 @@ struct listItem_t
 	struct listItem_t * pPrev;		/* Pointer to the previous list item */
 	void * pThread;					/* Pointer to the thread of the item */
 	void * pList;					/* Pointer to the list in which the item is */
+	uint32_t itemValue;
 };
 
 typedef struct listItem_t RTOS_listItem_t;

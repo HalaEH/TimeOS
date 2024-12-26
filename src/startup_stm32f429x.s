@@ -145,11 +145,11 @@ g_pfnVectors:
   .word  0
   .word  0
   .word  0
-  .word  SVC_Handler
+  .word  RTOS_SVC_Handler
   .word  DebugMon_Handler
   .word  0
-  .word  PendSV_Handler
-  .word  SysTick_Handler
+  .word  RTOS_PendSV_Handler
+  .word  RTOS_SysTick_Handler
   
   /* External Interrupts */
   .word     WWDG_IRQHandler                   /* Window WatchDog              */                                        

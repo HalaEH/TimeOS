@@ -9,7 +9,9 @@
 
 static RTOS_list_t readyList[THREAD_PRIORITY_LEVELS];
 static uint32_t currentTopPriority = (THREAD_PRIORITY_LEVELS - 1);
-RTOS_thread_t * pRunningThread;
+static RTOS_thread_t * pRunningThread;
+static uint32_t runningThreadID = 0;
+static uint32_t numOfThreads = 0;
 
 
 /**
@@ -68,11 +70,17 @@ void RTOS_threadCreate(RTOS_thread_t * pThread, RTOS_stack_t * pStack, uint32_t 
 	/* Set thread priority */
 	pThread->pPriority = priority;
 
+	pThread->threadID = ++numOfThreads;
+
 	/* Thread is not yet in the list */
 	pThread->item.pList = NULL;
 
 	/* Link this thread with its list item */
 	pThread->item.pThread = (void *) pThread;
+
+	pThread->item.itemValue = priority;
+
+	ASSERT(pThread != NULL);
 
 	/* Add new thread to ready list */
 	RTOS_listInsertEnd(&readyList[priority], &pThread->item);
@@ -109,4 +117,54 @@ RTOS_thread_t * RTOS_threadGetCurrentReady(void)
 {
 	return readyList[currentTopPriority].pIndex->pThread;
 
+}
+
+/**
+ * @brief Switches the currently running thread to the next ready thread.
+ *
+ * This function updates the currently running thread by finding the highest-priority
+ * thread that is ready to run. It cycles through the ready list of threads to
+ * determine the next thread to execute.
+ *
+ */
+void RTOS_threadSwitchRunning(void)
+{
+	/* Find highest priority ready thread */
+	while(readyList[currentTopPriority].numOfItems == 0)
+	{
+		ASSERT(THREAD_PRIORITY_LEVELS > currentTopPriority);
+		currentTopPriority++;
+	}
+
+	/* Threads are found, update list index to the next thread */
+	RTOS_list_t * pReadyList = &readyList[currentTopPriority];
+	pReadyList->pIndex = pReadyList->pIndex->pNext;
+
+	/* Check if the new index pointing to the end of the list */
+	if(pReadyList->pIndex == (RTOS_listItem_t *) &pReadyList->listEnd)
+	{
+		/* Get the next thread */
+		pReadyList->pIndex = pReadyList->pIndex->pNext;
+	}else
+	{
+		/* Do nothing, index is not pointing to the end */
+	}
+
+	/* Update current running thread */
+	pRunningThread = (RTOS_thread_t *) pReadyList->pIndex->pThread;
+	runningThreadID = pRunningThread->threadID;
+}
+
+/**
+ * @brief Retrieves the currently running thread.
+ *
+ * This function returns a pointer to the thread structure representing
+ * the currently running thread in the RTOS.
+ *
+ * @return A pointer to the `RTOS_thread_t` structure of the running thread.
+ *
+ */
+RTOS_thread_t * RTOS_threadGetRunning(void)
+{
+	return pRunningThread;
 }
