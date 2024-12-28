@@ -159,6 +159,18 @@ void RTOS_SVC_Handler_main(uint32_t * svc_args)
 		RTOS_mutexRelease((RTOS_mutex_t *) svc_args[0]);
 	break;
 
+	case 5:
+		RTOS_semaphoreCreate((RTOS_semaphore_t *) svc_args[0], (uint32_t) svc_args[1]);
+	break;
+
+	case 6:
+		returnStatus = RTOS_semaphoreTake((RTOS_semaphore_t *) svc_args[0], (uint32_t) svc_args[1]);
+	break;
+
+	case 7:
+		RTOS_semaphoreGive((RTOS_semaphore_t *) svc_args[0]);
+	break;
+
 	default:
 		/* Not supported SVC call */
 		ASSERT(0);
@@ -168,6 +180,7 @@ void RTOS_SVC_Handler_main(uint32_t * svc_args)
 	switch(svc_number)
 	{
 		case 3:
+		case 6:
 			if(returnStatus == 2)
 			{
 				svc_args[6] = svc_args[6] - 2;

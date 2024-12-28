@@ -14,6 +14,7 @@
 #include "rtos_list.h"
 #include "rtos_thread.h"
 #include "rtos_mutex.h"
+#include "rtos_semaphore.h"
 
 #define MEM32_ADDRESS(ADDRESS) (*((volatile unsigned long *)(ADDRESS)))
 
