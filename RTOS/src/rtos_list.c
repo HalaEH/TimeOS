@@ -69,4 +69,37 @@ void RTOS_listRemove(RTOS_listItem_t * pItem)
 	pList->numOfItems--;
 }
 
+/**
+ * @brief Inserts a list item in RTOS list based on the priority.
+ *
+ * This function adds a new item to the specified RTOS list based on the priority order
+ *
+ * @param pList Pointer to the RTOS_list_t structure where the item will be inserted.
+ * @param pItem Pointer to the RTOS_listItem_t structure to be inserted into the list.
+ *
+ */
+void RTOS_listInsert(RTOS_list_t * pList, RTOS_listItem_t * pItem)
+{
+	ASSERT(pList != NULL);
+	ASSERT(pItem != NULL);
+
+	/* Temp for the insert index */
+	RTOS_listItem_t * pInsertIndex = (RTOS_listItem_t *) &pList->listEnd;
+
+	/* Get insert index, find the high item value */
+	while((pInsertIndex->pNext != (RTOS_listItem_t *) &pList->listEnd) && (pInsertIndex->pNext->itemValue <= pItem->itemValue))
+	{
+		pInsertIndex = pInsertIndex->pNext;
+	}
+
+	/* Connect the new item with insert index */
+	pItem->pNext = pInsertIndex->pNext;
+	pItem->pPrev = pInsertIndex;
+	pInsertIndex->pNext->pPrev = pItem;
+	pInsertIndex->pNext = pItem;
+
+	pItem->pList = (void *) pList;
+	pList->numOfItems++;
+}
+
 

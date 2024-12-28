@@ -68,7 +68,7 @@ void RTOS_threadCreate(RTOS_thread_t * pThread, RTOS_stack_t * pStack, uint32_t 
 	MEM32_ADDRESS((pThread->pStackPointer + (1 << 2))) = 0x3;
 
 	/* Set thread priority */
-	pThread->pPriority = priority;
+	pThread->priority = priority;
 
 	pThread->threadID = ++numOfThreads;
 
@@ -93,7 +93,7 @@ void RTOS_threadCreate(RTOS_thread_t * pThread, RTOS_stack_t * pStack, uint32_t 
 
 	/* Check the need for context switch when scheduler is running
 	 * and if this thread is the higher priority than the running thread */
-	if((pRunningThread != NULL) && (priority < pRunningThread->pPriority))
+	if((pRunningThread != NULL) && (priority < pRunningThread->priority))
 	{
 		/* Trigger context switch, set PendSV to pending */
 		SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
@@ -167,4 +167,37 @@ void RTOS_threadSwitchRunning(void)
 RTOS_thread_t * RTOS_threadGetRunning(void)
 {
 	return pRunningThread;
+}
+
+/**
+ * @brief Adds a thread to the ready list and manages priority-based scheduling.
+ *
+ * This function inserts a thread into the ready list corresponding to its priority level.
+ * It updates the system's top priority if the added thread has a higher priority
+ * (lower numerical value). If the added thread's priority is higher than the currently
+ * running thread, a context switch is triggered to ensure the highest-priority thread
+ * executes.
+ *
+ * @param[in,out] pThread Pointer to the thread to be added to the ready list.
+ *                        Must not be NULL.
+ *
+ */
+void RTOS_threadAddToReadyList(RTOS_thread_t * pThread)
+{
+	ASSERT(pThread != NULL);
+	RTOS_listInsertEnd(&readyList[pThread->priority], &pThread->item);
+	if(pThread->priority < currentTopPriority)
+	{
+		currentTopPriority = pThread->priority;
+	}
+
+	if((pThread != NULL) && (pThread->priority < pRunningThread->priority))
+	{
+		/* Trigger context switching */
+		SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+	}else
+	{
+		/* Context switching is not required */
+	}
+
 }

@@ -13,6 +13,7 @@
 #include "rtos_config.h"
 #include "rtos_list.h"
 #include "rtos_thread.h"
+#include "rtos_mutex.h"
 
 #define MEM32_ADDRESS(ADDRESS) (*((volatile unsigned long *)(ADDRESS)))
 

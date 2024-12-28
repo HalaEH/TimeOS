@@ -130,6 +130,8 @@ void RTOS_SVC_Handler_main(uint32_t * svc_args)
 	/* Memory[Stacked PC)-2] */
 	svc_number = ((char *) svc_args[6])[-2];
 
+	uint32_t returnStatus;
+
 	/* Check SVC number */
 	switch(svc_number)
 	{
@@ -145,9 +147,37 @@ void RTOS_SVC_Handler_main(uint32_t * svc_args)
 				(void *) svc_args[3]);
 		break;
 
+	case 2:
+		RTOS_mutexCreate((RTOS_mutex_t *) svc_args[0], (uint32_t) svc_args[1]);
+	break;
+
+	case 3:
+		returnStatus = RTOS_mutexLock((RTOS_mutex_t *) svc_args[0], (uint32_t) svc_args[1]);
+	break;
+
+	case 4:
+		RTOS_mutexRelease((RTOS_mutex_t *) svc_args[0]);
+	break;
+
 	default:
 		/* Not supported SVC call */
 		ASSERT(0);
+		break;
+	}
+
+	switch(svc_number)
+	{
+		case 3:
+			if(returnStatus == 2)
+			{
+				svc_args[6] = svc_args[6] - 2;
+			}else
+			{
+				svc_args[0] = returnStatus;
+			}
+		break;
+
+		default:
 		break;
 	}
 
