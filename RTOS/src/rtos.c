@@ -171,6 +171,18 @@ void RTOS_SVC_Handler_main(uint32_t * svc_args)
 		RTOS_semaphoreGive((RTOS_semaphore_t *) svc_args[0]);
 	break;
 
+	case 8:
+		RTOS_mailboxCreate((RTOS_mailbox_t *) svc_args[0], (void *) svc_args[1], (uint32_t) svc_args[2], (uint32_t) svc_args[3]);
+	break;
+
+	case 9:
+		returnStatus = RTOS_mailboxWrite((RTOS_mailbox_t *) svc_args[0], (uint32_t) svc_args[1], (const void * const) svc_args[2]);
+	break;
+
+	case 10:
+		returnStatus = RTOS_mailboxRead((RTOS_mailbox_t *) svc_args[0], (uint32_t) svc_args[1], (void * const) svc_args[2]);
+	break;
+
 	default:
 		/* Not supported SVC call */
 		ASSERT(0);
@@ -181,6 +193,8 @@ void RTOS_SVC_Handler_main(uint32_t * svc_args)
 	{
 		case 3:
 		case 6:
+		case 9:
+		case 10:
 			if(returnStatus == 2)
 			{
 				svc_args[6] = svc_args[6] - 2;

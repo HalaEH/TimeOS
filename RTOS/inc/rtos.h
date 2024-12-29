@@ -15,6 +15,7 @@
 #include "rtos_thread.h"
 #include "rtos_mutex.h"
 #include "rtos_semaphore.h"
+#include "rtos_mailbox.h"
 
 #define MEM32_ADDRESS(ADDRESS) (*((volatile unsigned long *)(ADDRESS)))
 

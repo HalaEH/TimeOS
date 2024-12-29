@@ -19,6 +19,9 @@
 .global RTOS_SVC_semaphoreCreate
 .global RTOS_SVC_semaphoreTake
 .global RTOS_SVC_semaphoreGive
+.global RTOS_SVC_mailboxCreate
+.global RTOS_SVC_mailboxWrite
+.global RTOS_SVC_mailboxRead
 
 .text
 
@@ -62,3 +65,17 @@ RTOS_SVC_semaphoreGive:
 	svc 7
 	bx lr
 
+.type RTOS_SVC_mailboxCreate, %function
+RTOS_SVC_mailboxCreate:
+	svc 8
+	bx lr
+
+.type RTOS_SVC_mailboxWrite, %function
+RTOS_SVC_mailboxWrite:
+	svc 9
+	bx lr
+
+.type RTOS_SVC_mailboxRead, %function
+RTOS_SVC_mailboxRead:
+	svc 10
+	bx lr
