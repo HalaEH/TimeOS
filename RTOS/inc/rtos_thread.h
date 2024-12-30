@@ -15,7 +15,8 @@ typedef struct thread_t
 	uint32_t pStackPointer;
 	uint32_t priority;
 	uint32_t threadID;
-	RTOS_listItem_t item;
+	RTOS_listItem_t listItem;
+	RTOS_listItem_t eventListItem;
 } RTOS_thread_t;
 
 typedef struct
@@ -30,5 +31,10 @@ RTOS_thread_t * RTOS_threadGetCurrentReady(void);
 void RTOS_threadSwitchRunning(void);
 RTOS_thread_t * RTOS_threadGetRunning(void);
 void RTOS_threadAddToReadyList(RTOS_thread_t * pThread);
+void RTOS_threadRefreshTimerList(void);
+void RTOS_threadAddRunningToTimerList(uint32_t waitTime);
+void RTOS_threadDestroy(RTOS_thread_t * pThread);
+void RTOS_SVC_threadDestroy(RTOS_thread_t * pThread);
+void RTOS_SVC_threadDelay(uint32_t waitTime);
 
 #endif /* INC_RTOS_THREAD_H_ */

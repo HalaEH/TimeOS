@@ -54,14 +54,14 @@ void RTOS_mutexCreate(RTOS_mutex_t * pMutex, uint32_t initialValue)
  *         2 - Mutex not locked, thread added to the waiting list (only if `waitFlag` is 1).
  *
  */
-uint32_t RTOS_mutexLock(RTOS_mutex_t * pMutex, uint32_t waitFlag)
+uint32_t RTOS_mutexLock(RTOS_mutex_t * pMutex, int32_t waitTime)
 {
 	/* Check input parameters */
 	ASSERT(pMutex != NULL);
-	ASSERT((waitFlag == 0) || (waitFlag == 1));
+	ASSERT(waitTime >= WAIT_INDEFINITELY);
 
 	RTOS_thread_t * pRunningThread;
-	uint32_t returnStatus;
+	RTOS_return_t returnStatus = RTOS_FAILURE;
 	uint32_t terminate = 0;
 
 	while(terminate != 1)
@@ -72,7 +72,7 @@ uint32_t RTOS_mutexLock(RTOS_mutex_t * pMutex, uint32_t waitFlag)
 			if(__STREXW(0, &pMutex->mutexValue) == 0)
 			{
 				__DMB();
-				returnStatus = 1;
+				returnStatus = RTOS_SUCCESS;
 				terminate = 1;
 			}else
 			{
@@ -85,17 +85,19 @@ uint32_t RTOS_mutexLock(RTOS_mutex_t * pMutex, uint32_t waitFlag)
 		}
 	}
 
-	if((waitFlag == 1) && (returnStatus != 1))
+	if((waitTime != NO_WAIT) && (returnStatus != RTOS_SUCCESS))
 	{
 		pRunningThread = RTOS_threadGetRunning();
-		RTOS_listRemove(&pRunningThread->item);
-		RTOS_listInsert(&pMutex->waitingList, &pRunningThread->item);
+		RTOS_listRemove(&pRunningThread->listItem);
+		RTOS_listInsert(&pMutex->waitingList, &pRunningThread->eventListItem);
 		SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
-		returnStatus = 2;
-	}else
-	{
-		/* No blocking required, do nothing  */
+		if(waitTime > NO_WAIT)
+		{
+			RTOS_threadAddRunningToTimerList(waitTime);
+		}
+		returnStatus = RTOS_CONTEXT_SWITCH_TRIGGERED;
 	}
+
 	return returnStatus;
 }
 
@@ -121,7 +123,11 @@ void RTOS_mutexRelease(RTOS_mutex_t * pMutex)
 	{
 		pThread = pMutex->waitingList.listEnd.pNext->pThread;
 		ASSERT(pThread != NULL);
-		RTOS_listRemove(&pThread->item);
+		RTOS_listRemove(&pThread->listItem);
+		if(pThread->listItem.pList != NULL)
+		{
+			RTOS_listRemove(&pThread->listItem);
+		}
 		RTOS_threadAddToReadyList(pThread);
 	}else
 	{

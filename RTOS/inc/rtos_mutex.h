@@ -18,8 +18,8 @@ void RTOS_mutexCreate(RTOS_mutex_t * pMutex, uint32_t initialValue);
 void RTOS_SVC_mutexCreate(RTOS_mutex_t * pMutex, uint32_t initialValue);
 
 
-uint32_t RTOS_mutexLock(RTOS_mutex_t * pMutex, uint32_t waitFlag);
-uint32_t RTOS_SVC_mutexLock(RTOS_mutex_t * pMutex, uint32_t waitFlag);
+uint32_t RTOS_mutexLock(RTOS_mutex_t * pMutex, int32_t waitTime);
+uint32_t RTOS_SVC_mutexLock(RTOS_mutex_t * pMutex, int32_t waitTime);
 
 
 void RTOS_mutexRelease(RTOS_mutex_t * pMutex);

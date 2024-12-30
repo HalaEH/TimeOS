@@ -8,11 +8,12 @@
 #include "rtos.h"
 
 static RTOS_list_t readyList[THREAD_PRIORITY_LEVELS];
+static RTOS_list_t timerList;
 static uint32_t currentTopPriority = (THREAD_PRIORITY_LEVELS - 1);
 static RTOS_thread_t * pRunningThread;
 static uint32_t runningThreadID = 0;
 static uint32_t numOfThreads = 0;
-
+static volatile uint32_t sysTickCounter = 0;
 
 /**
  * @brief Initializes the ready lists for all thread priority levels.
@@ -28,7 +29,7 @@ void RTOS_threadInitLists(void)
 	{
 		RTOS_listInit(&readyList[priority]);
 	}
-
+	RTOS_listInit(&timerList);
 }
 
 /**
@@ -70,37 +71,23 @@ void RTOS_threadCreate(RTOS_thread_t * pThread, RTOS_stack_t * pStack, uint32_t 
 	/* Set thread priority */
 	pThread->priority = priority;
 
-	pThread->threadID = ++numOfThreads;
+	if(pThread->threadID == 0)
+	{
+		pThread->threadID = ++numOfThreads;
+	}
+
 
 	/* Thread is not yet in the list */
-	pThread->item.pList = NULL;
+	pThread->listItem.pList = NULL;
+	pThread->eventListItem.pList = NULL;
 
 	/* Link this thread with its list item */
-	pThread->item.pThread = (void *) pThread;
+	pThread->listItem.pThread = (void *) pThread;
+	pThread->eventListItem.pThread = (void *) pThread;
 
-	pThread->item.itemValue = priority;
+	pThread->eventListItem.itemValue = priority;
 
-	ASSERT(pThread != NULL);
-
-	/* Add new thread to ready list */
-	RTOS_listInsertEnd(&readyList[priority], &pThread->item);
-
-	/* Set current top priority */
-	if(priority < currentTopPriority)
-	{
-		currentTopPriority = priority;
-	}
-
-	/* Check the need for context switch when scheduler is running
-	 * and if this thread is the higher priority than the running thread */
-	if((pRunningThread != NULL) && (priority < pRunningThread->priority))
-	{
-		/* Trigger context switch, set PendSV to pending */
-		SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
-	}else
-	{
-		/* Context switch is not required */
-	}
+	RTOS_threadAddToReadyList(pThread);
 }
 
 
@@ -185,7 +172,7 @@ RTOS_thread_t * RTOS_threadGetRunning(void)
 void RTOS_threadAddToReadyList(RTOS_thread_t * pThread)
 {
 	ASSERT(pThread != NULL);
-	RTOS_listInsertEnd(&readyList[pThread->priority], &pThread->item);
+	RTOS_listInsertEnd(&readyList[pThread->priority], &pThread->listItem);
 	if(pThread->priority < currentTopPriority)
 	{
 		currentTopPriority = pThread->priority;
@@ -200,4 +187,95 @@ void RTOS_threadAddToReadyList(RTOS_thread_t * pThread)
 		/* Context switching is not required */
 	}
 
+}
+
+/**
+ * @brief Updates the timer list and moves threads ready for execution to the ready list.
+ *
+ * This function increments the system tick counter and processes the timer list to refresh
+ * the state of threads whose delay timers have expired. Threads that are ready to run
+ * are moved to the ready list, enabling them to be scheduled by the RTOS.
+ *
+ */
+void RTOS_threadRefreshTimerList(void)
+{
+	RTOS_thread_t * pThread;
+	if(RTOS_isSchedulerRunning())
+	{
+		sysTickCounter++;
+		if(sysTickCounter == 0)
+		{
+			ASSERT(0);
+		}
+		if(timerList.numOfItems > 0)
+		{
+			while(sysTickCounter >= timerList.listEnd.pNext->itemValue)
+			{
+				pThread = timerList.listEnd.pNext->pThread;
+				ASSERT(pThread != NULL);
+				RTOS_listRemove(&pThread->listItem);
+				if(pThread->eventListItem.pList != NULL)
+				{
+					RTOS_listRemove(&pThread->eventListItem);
+				}
+				RTOS_threadAddToReadyList(pThread);
+			}
+		}
+	}
+}
+
+/**
+ * @brief Moves the currently running thread to the timer list for delayed execution.
+ *
+ * This function adds the currently running thread to the timer list after calculating
+ * the tick value at which the thread should be woken up. It ensures the thread is removed
+ * from its current list and inserted into the timer list with the appropriate wake-up time.
+ *
+ * @param waitTime The delay in ticks before the thread is scheduled to wake up.
+ *
+ */
+void RTOS_threadAddRunningToTimerList(uint32_t waitTime)
+{
+	ASSERT(waitTime != 0);
+	uint32_t wakeUpTick = 0;
+	wakeUpTick = sysTickCounter + waitTime;
+	if(sysTickCounter > wakeUpTick)
+	{
+		ASSERT(0);
+	}
+	pRunningThread->listItem.itemValue = wakeUpTick;
+	RTOS_listRemove(&pRunningThread->listItem);
+	RTOS_listInsert(&timerList, &pRunningThread->listItem);
+	SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+}
+
+/**
+ * @brief Destroys a thread and removes it from all associated lists.
+ *
+ * This function performs the necessary cleanup for a thread by removing it
+ * from any system lists it is part of (ready list, event list, etc.).
+ * If the thread being destroyed is currently running, it triggers a context
+ * switch to ensure proper RTOS behavior.
+ *
+ * @param pThread Pointer to the thread object to be destroyed. Must not be NULL.
+ *
+ */
+void RTOS_threadDestroy(RTOS_thread_t * pThread)
+{
+	ASSERT(pThread != NULL);
+	if(pThread->listItem.pList != NULL)
+	{
+		RTOS_listRemove(&pThread->listItem);
+	}
+
+	if(pThread->eventListItem.pList != NULL)
+	{
+		RTOS_listRemove(&pThread->eventListItem);
+	}
+
+	if(pThread == pRunningThread)
+	{
+		/* Trigger context switching */
+		SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+	}
 }

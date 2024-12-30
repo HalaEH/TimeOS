@@ -17,8 +17,8 @@ typedef struct
 void RTOS_semaphoreCreate(RTOS_semaphore_t * pSemaphore, uint32_t initialValue);
 void RTOS_SVC_semaphoreCreate(RTOS_semaphore_t * pSemaphore, uint32_t initialValue);
 
-uint32_t RTOS_semaphoreTake(RTOS_semaphore_t * pSemaphore, uint32_t waitFlag);
-uint32_t RTOS_SVC_semaphoreTake(RTOS_semaphore_t * pSemaphore, uint32_t waitFlag);
+uint32_t RTOS_semaphoreTake(RTOS_semaphore_t * pSemaphore, int32_t waitTime);
+uint32_t RTOS_SVC_semaphoreTake(RTOS_semaphore_t * pSemaphore, int32_t waitTime);
 
 void RTOS_semaphoreGive(RTOS_semaphore_t * pSemaphore);
 void RTOS_SVC_semaphoreGive(RTOS_semaphore_t * pSemaphore);

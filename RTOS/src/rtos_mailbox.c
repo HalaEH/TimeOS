@@ -30,7 +30,11 @@ static void checkWaitingThreads(RTOS_mailbox_t * pMailbox)
 	{
 		pThread = pMailbox->waitingList.listEnd.pNext->pThread;
 		ASSERT(NULL != pThread);
-		RTOS_listRemove(&pThread->item);
+		RTOS_listRemove(&pThread->eventListItem);
+		if(pThread->listItem.pList != NULL)
+		{
+			RTOS_listRemove(&pThread->listItem);
+		}
 		RTOS_threadAddToReadyList(pThread);
 	}
 	else
@@ -56,8 +60,8 @@ static void blockCurrentThread(RTOS_mailbox_t * pMailbox)
 {
 	RTOS_thread_t * pRunningThread;
 	pRunningThread = RTOS_threadGetRunning();
-	RTOS_listRemove(&pRunningThread->item);
-	RTOS_listInsert(&pMailbox->waitingList, &pRunningThread->item);
+	RTOS_listRemove(&pRunningThread->listItem);
+	RTOS_listInsert(&pMailbox->waitingList, &pRunningThread->eventListItem);
 	SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 }
 
@@ -84,7 +88,7 @@ void RTOS_mailboxCreate(RTOS_mailbox_t * pMailbox, void * pBuffer, uint32_t buff
 	ASSERT((messageSize == 1) || (messageSize == 2) || (messageSize == 4));
 
 	/* Set mailbox buffer start and end */
-	pMailbox->pStart = (int8_t) pBuffer;
+	pMailbox->pStart = (int8_t *) pBuffer;
 	pMailbox->pEnd = pMailbox->pStart + messageSize;
 
 	/* Initialize read and write indices */
@@ -121,14 +125,14 @@ void RTOS_mailboxCreate(RTOS_mailbox_t * pMailbox, void * pBuffer, uint32_t buff
  *         0 - Message not written, and no blocking occurred (only if `waitFlag` is 0).
  *
  */
-uint32_t RTOS_mailboxWrite(RTOS_mailbox_t * pMailbox, uint32_t waitFlag, const void * const pMessage)
+uint32_t RTOS_mailboxWrite(RTOS_mailbox_t * pMailbox, int32_t waitTime, const void * const pMessage)
 {
 	/* Check input parameters */
 	ASSERT(pMailbox != NULL);
-	ASSERT((waitFlag == 0) || (waitFlag == 1));
+	ASSERT(waitTime >= WAIT_INDEFINITELY);
 	ASSERT(pMessage != NULL);
 
-	uint32_t returnStatus = 0;
+	RTOS_return_t returnStatus = RTOS_FAILURE;
 
 	/* Check if there is a free place to write */
 	if(pMailbox->bufferLength > pMailbox->messagesNum)
@@ -148,17 +152,21 @@ uint32_t RTOS_mailboxWrite(RTOS_mailbox_t * pMailbox, uint32_t waitFlag, const v
 		}
 		pMailbox->messagesNum++;
 		checkWaitingThreads(pMailbox);
-		returnStatus = 1;
+		returnStatus = RTOS_SUCCESS;
 	}
 	else
 	{
 		/* Do nothing, Buffer is full */
 	}
 
-	if((1 == waitFlag) && (1 != returnStatus))
+	if((waitTime != NO_WAIT) && (returnStatus != RTOS_SUCCESS))
 	{
 		blockCurrentThread(pMailbox);
-		returnStatus = 2;
+		if(waitTime > NO_WAIT)
+		{
+			RTOS_threadAddRunningToTimerList(waitTime);
+		}
+		returnStatus = RTOS_CONTEXT_SWITCH_TRIGGERED;
 	}
 	else
 	{
@@ -189,14 +197,14 @@ uint32_t RTOS_mailboxWrite(RTOS_mailbox_t * pMailbox, uint32_t waitFlag, const v
  *         0 - No message was read, and no blocking occurred (only if `waitFlag` is 0).
  *
  */
-uint32_t RTOS_mailboxRead(RTOS_mailbox_t * pMailbox, uint32_t waitFlag, void * const pMessage)
+uint32_t RTOS_mailboxRead(RTOS_mailbox_t * pMailbox, int32_t waitTime, void * const pMessage)
 {
 	/* Check input parameters */
 	ASSERT(pMailbox != NULL);
-	ASSERT((waitFlag == 0) || (waitFlag == 1));
+	ASSERT(waitTime >= WAIT_INDEFINITELY);
 	ASSERT(pMessage != NULL);
 
-	uint32_t returnStatus;
+	RTOS_return_t returnStatus = RTOS_FAILURE;
 
 	if(pMailbox->messagesNum > 0)
 	{
@@ -213,17 +221,21 @@ uint32_t RTOS_mailboxRead(RTOS_mailbox_t * pMailbox, uint32_t waitFlag, void * c
 		}
 		pMailbox->messagesNum--;
 		checkWaitingThreads(pMailbox);
-		returnStatus = 1;
+		returnStatus = RTOS_SUCCESS;
 	}
 	else
 	{
 		/* Do nothing, Buffer is full */
 	}
 
-	if((1 == waitFlag) && (1 != returnStatus))
+	if((waitTime != NO_WAIT) && (returnStatus != RTOS_SUCCESS))
 	{
 		blockCurrentThread(pMailbox);
-		returnStatus = 2;
+		if(waitTime > NO_WAIT)
+		{
+			RTOS_threadAddRunningToTimerList(waitTime);
+		}
+		returnStatus = RTOS_CONTEXT_SWITCH_TRIGGERED;
 	}
 	else
 	{

@@ -25,14 +25,14 @@ void RTOS_mailboxCreate(RTOS_mailbox_t * pMailbox, void * pBuffer,
 void RTOS_SVC_mailboxCreate(RTOS_mailbox_t * pMailbox, void * pBuffer,
     uint32_t bufferLength, uint32_t messageSize);
 
-uint32_t RTOS_mailboxWrite(RTOS_mailbox_t * pMailbox, uint32_t waitFlag,
+uint32_t RTOS_mailboxWrite(RTOS_mailbox_t * pMailbox, int32_t waitTime,
     const void * const pMessage);
-uint32_t RTOS_SVC_mailboxWrite(RTOS_mailbox_t * pMailbox, uint32_t waitFlag,
+uint32_t RTOS_SVC_mailboxWrite(RTOS_mailbox_t * pMailbox, int32_t waitTime,
     const void * const pMessage);
 
-uint32_t RTOS_mailboxRead(RTOS_mailbox_t * pMailbox, uint32_t waitFlag,
+uint32_t RTOS_mailboxRead(RTOS_mailbox_t * pMailbox, int32_t waitTime,
     void * const pMessage);
-uint32_t RTOS_SVC_mailboxRead(RTOS_mailbox_t * pMailbox, uint32_t waitFlag,
+uint32_t RTOS_SVC_mailboxRead(RTOS_mailbox_t * pMailbox, int32_t waitTime,
     void * const pMessage);
 
 

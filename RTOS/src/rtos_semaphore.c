@@ -45,13 +45,13 @@ void RTOS_semaphoreCreate(RTOS_semaphore_t * pSemaphore, uint32_t initialValue)
  *         2 - Semaphore not available, thread added to the waiting list (only if `waitFlag` is 1).
  *
  */
-uint32_t RTOS_semaphoreTake(RTOS_semaphore_t * pSemaphore, uint32_t waitFlag)
+uint32_t RTOS_semaphoreTake(RTOS_semaphore_t * pSemaphore, int32_t waitTime)
 {
 	ASSERT(pSemaphore != NULL);
-	ASSERT((waitFlag == 0) || (waitFlag == 1));
+	ASSERT(waitTime >= WAIT_INDEFINITELY);
 
 	RTOS_thread_t * pRunningThread;
-	uint32_t returnStatus;
+	RTOS_return_t returnStatus = RTOS_FAILURE;
 	uint32_t semaphoreValueTemp = 0;
 	uint32_t terminate = 0;
 
@@ -63,7 +63,7 @@ uint32_t RTOS_semaphoreTake(RTOS_semaphore_t * pSemaphore, uint32_t waitFlag)
 					if(__STREXW((semaphoreValueTemp - 1), &pSemaphore->semaphoreValue) == 0)
 					{
 						__DMB();
-						returnStatus = 1;
+						returnStatus = RTOS_SUCCESS;
 						terminate = 1;
 					}else
 					{
@@ -76,13 +76,17 @@ uint32_t RTOS_semaphoreTake(RTOS_semaphore_t * pSemaphore, uint32_t waitFlag)
 				}
 	}
 
-	if((waitFlag == 1) && (returnStatus != 1))
+	if((waitTime != NO_WAIT) && (returnStatus != RTOS_SUCCESS))
 	{
 		pRunningThread = RTOS_threadGetRunning();
-		RTOS_listRemove(&pRunningThread->item);
-		RTOS_listInsert(&pSemaphore->waitingList, &pRunningThread->item);
+		RTOS_listRemove(&pRunningThread->listItem);
+		RTOS_listInsert(&pSemaphore->waitingList, &pRunningThread->eventListItem);
 		SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
-		returnStatus = 2;
+		if(waitTime > NO_WAIT)
+		{
+			RTOS_threadAddRunningToTimerList(waitTime);
+		}
+		returnStatus = RTOS_CONTEXT_SWITCH_TRIGGERED;
 	}else
 	{
 		/* No blocking required, do nothing  */
@@ -127,7 +131,11 @@ void RTOS_semaphoreGive(RTOS_semaphore_t * pSemaphore)
 	{
 		pThread = pSemaphore->waitingList.listEnd.pNext->pThread;
 		ASSERT(pThread != NULL);
-		RTOS_listRemove(&pThread->item);
+		RTOS_listRemove(&pThread->eventListItem);
+		if(pThread->listItem.pList != NULL)
+		{
+			RTOS_listRemove(&pThread->listItem);
+		}
 		RTOS_threadAddToReadyList(pThread);
 	}else
 	{
